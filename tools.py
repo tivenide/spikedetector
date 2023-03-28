@@ -143,3 +143,21 @@ def devide_3_vectors_into_equal_windows_with_step(x1, x2, x3, window_size, step_
         x2_windows.append(x2[i:i + window_size])
         x3_windows.append(x3[i:i + window_size])
     return x1_windows, x2_windows, x3_windows
+
+def application_of_windowing(merged_data, window_size, step_size=None):
+    """
+    Application of windowing
+    :param merged_data:
+    :param window_size:
+    :param step_size:
+    :return: A numpy array representing the merged data, which is devided by windows. With rows corresponding to windows
+        and columns corresponding to signal_raw, labels, timestamps and electrode number.
+    """
+    import numpy as np
+
+    frame = []
+    for i in range(len(merged_data)):
+        win1, win2, win3 = devide_3_vectors_into_equal_windows_with_step(merged_data[i][0], merged_data[i][1], merged_data[i][2], window_size, step_size)
+        for l in range(len(win1)):
+            frame.append(np.array([win1[l], win2[l], win3[l], i], dtype=object))
+    return np.array(frame)
