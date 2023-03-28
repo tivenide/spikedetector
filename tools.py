@@ -59,3 +59,29 @@ def create_labels_of_all_spiketrains(ground_truth, timestamps):
         labels = create_labels_for_spiketrain(timestamps, ground_truth[i])
         labels_of_all_spiketrains.append(labels)
     return np.array(labels_of_all_spiketrains)
+
+def assign_neuron_locations_to_electrode_locations(electrode_locations, neuron_locations, threshold):
+    """
+    Assigns the index of a neuron location to the index of an electrode location if
+    the distance between them is less than or equal to the threshold value.
+    :param electrode_locations:
+    :param neuron_locations:
+    :param threshold: The maximum distance between an electrode location and a neuron location for them
+        to be considered a match.
+    :return:
+    """
+    import pandas as pd
+    import numpy as np
+
+    # Compute the distance between each electrode location and each neuron location
+    distances = np.sqrt(((electrode_locations.values[:, np.newaxis, :] - neuron_locations.values)**2).sum(axis=2))
+
+    # Create an empty DataFrame to store the results
+    assignments = pd.DataFrame(index=electrode_locations.index, columns=neuron_locations.index, dtype=bool)
+
+    # Assign each channel position to its closest neuron_locations (if within the threshold distance)
+    for i, point_idx in enumerate(neuron_locations.index):
+        mask = distances[:, i] <= threshold
+        assignments.iloc[:, i] = mask
+
+    return assignments
