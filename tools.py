@@ -73,14 +73,17 @@ def assign_neuron_locations_to_electrode_locations(electrode_locations, neuron_l
     import pandas as pd
     import numpy as np
 
+    electrode_locations_df = pd.DataFrame(electrode_locations)
+    neuron_locations_df = pd.DataFrame(neuron_locations)
+
     # Compute the distance between each electrode location and each neuron location
-    distances = np.sqrt(((electrode_locations.values[:, np.newaxis, :] - neuron_locations.values)**2).sum(axis=2))
+    distances = np.sqrt(((electrode_locations_df.values[:, np.newaxis, :] - neuron_locations_df.values)**2).sum(axis=2))
 
     # Create an empty DataFrame to store the results
-    assignments = pd.DataFrame(index=electrode_locations.index, columns=neuron_locations.index, dtype=bool)
+    assignments = pd.DataFrame(index=electrode_locations_df.index, columns=neuron_locations_df.index, dtype=bool)
 
     # Assign each channel position to its closest neuron_locations (if within the threshold distance)
-    for i, point_idx in enumerate(neuron_locations.index):
+    for i, point_idx in enumerate(neuron_locations_df.index):
         mask = distances[:, i] <= threshold
         assignments.iloc[:, i] = mask
 
