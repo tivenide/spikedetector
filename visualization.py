@@ -34,3 +34,10 @@ def visualize_assignments(electrode_locations, neuron_locations, assignments):
     ax.legend()
     ax.set_aspect('equal', adjustable='box')
     plt.show()
+
+def visualize_assignments_of_one_recording(path, distance_threshold):
+    from tools import import_recording_h5, assign_neuron_locations_to_electrode_locations
+    from visualization import visualize_assignments
+    signal_raw, timestamps, ground_truth, electrode_locations, neuron_locations = import_recording_h5(path)
+    assignments = assign_neuron_locations_to_electrode_locations(electrode_locations, neuron_locations, distance_threshold)
+    visualize_assignments(electrode_locations, neuron_locations, assignments)
