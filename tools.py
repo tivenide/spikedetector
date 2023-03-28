@@ -161,3 +161,12 @@ def application_of_windowing(merged_data, window_size, step_size=None):
         for l in range(len(win1)):
             frame.append(np.array([win1[l], win2[l], win3[l], i], dtype=object))
     return np.array(frame)
+
+def preprocessing_for_one_recording(path):
+    signal_raw, timestamps, ground_truth, electrode_locations, neuron_locations = import_recording_h5(path)
+    labels_of_all_spiketrains = create_labels_of_all_spiketrains(ground_truth, timestamps)
+    assignments = assign_neuron_locations_to_electrode_locations(electrode_locations, neuron_locations, 100)
+    merged_data = merge_data_to_location_assignments(assignments, signal_raw, labels_of_all_spiketrains, timestamps)
+    frame = application_of_windowing(merged_data, window_size=32, step_size=None)
+    print('preprocessing finished for:', path)
+    return frame
