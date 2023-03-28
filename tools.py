@@ -118,3 +118,28 @@ def merge_data_to_location_assignments(assignments, signal_raw, labels_of_all_sp
                 merged = np.logical_or(merged, labels_of_all_spiketrains[j, :])
         merged_data.append([signal_raw[i], merged.astype(int), timestamps])
     return np.array(merged_data)
+
+def devide_3_vectors_into_equal_windows_with_step(x1, x2, x3, window_size, step_size=None):
+    """
+    Devides vectors x1, x2, x3 into windows with one window_size. step_size is used to generate more windows with overlap.
+    :param x1: Input list to be devided.
+    :param x2: Input list to be devided.
+    :param x3: Input list to be devided.
+    :param window_size: Size of each window.
+    :param step_size: If the step_size is not provided, it defaults to the window_size.
+        If the step_size is set to True, it is set to half of the window_size.
+        If the step_size is set to any other value, it is used directly as the step_size.
+    :return: Returns for every input a list of lists. Each included list represents a window.
+    """
+    if step_size is None:
+        step_size = window_size
+    elif step_size is True:
+        step_size = window_size // 2
+    x1_windows = []
+    x2_windows = []
+    x3_windows = []
+    for i in range(0, len(x1) - window_size + 1, step_size):
+        x1_windows.append(x1[i:i + window_size])
+        x2_windows.append(x2[i:i + window_size])
+        x3_windows.append(x3[i:i + window_size])
+    return x1_windows, x2_windows, x3_windows
