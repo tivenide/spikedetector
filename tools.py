@@ -85,3 +85,36 @@ def assign_neuron_locations_to_electrode_locations(electrode_locations, neuron_l
         assignments.iloc[:, i] = mask
 
     return assignments
+
+def merge_data_to_location_assignments(assignments, signal_raw, labels_of_all_spiketrains, timestamps):
+    """
+    Assigns the label vectors to the raw data. For the merging of multiple spiketrains to one electrode the
+    np.logical_or() is used. For electrodes without an assignment to spiketrains empty spiketrains are generated.
+    Additionally, timestamps are added.
+    :param assignments: A DataFrame representing the local assignment between neurons and electrodes.
+        With rows corresponding to electrodes and columns corresponding to neurons. Each cell in the
+        DataFrame is True if the corresponding channel position is within the threshold distance of the
+        corresponding neuron, and False otherwise. If a channel position is not assigned to any neuron position,
+        the corresponding cells are False.
+    :param signal_raw: A numpy array representing the recorded signal, with rows
+        corresponding to electrodes of the MEA and columns corresponding to timestamps.
+    :param labels_of_all_spiketrains: A numpy array representing the labels, with rows
+        corresponding to spiketrains of the different neurons and columns corresponding to timestamps.
+    :param timestamps:
+    :return: merged_data: A numpy array representing the merged data. It's build like nested lists. The structure:
+        [[[raw_data of the first electrode],[labels of the first electrode],[timestamps of the first electrode]],
+        [[raw_data of the second electrode],[labels of the second electrode],[timestamps of the second electrode]], etc.]
+    """
+    import numpy as np
+
+    assignments2 = np.array(assignments, dtype=bool)
+    merged_data = []
+
+    for i in range(assignments2.shape[0]):  # iterate over rows in assignments
+        row = assignments2[i]  # equals electrode
+        merged = np.zeros(len(labels_of_all_spiketrains[0]))  # generating empty spiketrains
+        for j, value in enumerate(row):  # iterate over "columns" in rows
+            if value:
+                merged = np.logical_or(merged, labels_of_all_spiketrains[j, :])
+        merged_data.append([signal_raw[i], merged.astype(int), timestamps])
+    return np.array(merged_data)
