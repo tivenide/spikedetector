@@ -1,5 +1,6 @@
 def visualize_assignments(electrode_locations, neuron_locations, assignments):
     import matplotlib.pyplot as plt
+    import pandas as pd
     electrode_pos = pd.DataFrame({
         'x': electrode_locations[:, 1],
         'y': electrode_locations[:, 2],
