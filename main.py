@@ -6,12 +6,17 @@ if __name__ == '__main__':
     print_hi('Spike interested data engineer')
 
 #for one recording
-path='data/recording.h5'
+path_file='data/recording_allen_3sec_1000_1000_100_1000.h5'
+#for multiple recordings
+path_dir='data/'
 
 from tools import preprocessing_for_one_recording
-#preprocessing_for_one_recording(path)
+#preprocessing_for_one_recording(path_file)
 
 from visualization import visualize_assignments_of_one_recording
-#visualize_assignments_of_one_recording(path, 100)
+#visualize_assignments_of_one_recording(path_file, 15)
+
+from tools import preprocessing_for_multiple_recordings
+preprocessing_for_multiple_recordings(path_dir)
 
 print('finish')

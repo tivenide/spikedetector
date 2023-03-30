@@ -166,10 +166,37 @@ def application_of_windowing(merged_data, window_size, step_size=None):
     return np.array(frame)
 
 def preprocessing_for_one_recording(path):
+    """
+    preprocessing pipeline for one recording (without normalization)
+    :param path: path to recording file
+    :return: frame: A numpy array representing the merged data, which is devided by windows. With rows corresponding to windows
+        and columns corresponding to signal_raw, labels, timestamps and electrode number.
+    """
     signal_raw, timestamps, ground_truth, electrode_locations, neuron_locations = import_recording_h5(path)
     labels_of_all_spiketrains = create_labels_of_all_spiketrains(ground_truth, timestamps)
-    assignments = assign_neuron_locations_to_electrode_locations(electrode_locations, neuron_locations, 100)
+    assignments = assign_neuron_locations_to_electrode_locations(electrode_locations, neuron_locations, 20)
     merged_data = merge_data_to_location_assignments(assignments, signal_raw.transpose(), labels_of_all_spiketrains, timestamps)
-    frame = application_of_windowing(merged_data, window_size=32, step_size=None)
+    frame = application_of_windowing(merged_data, window_size=10, step_size=None)
     print('preprocessing finished for:', path)
     return frame
+
+def preprocessing_for_multiple_recordings(path):
+    """
+    preprocessing pipeline for multiple recordings (without normalization)
+    :param path: path to recording files. Only MEArec generated h5. recording files may be located here.
+    :return: frame_of_multiple_recordings: A numpy array representing the merged data, which is devided by windows. With rows corresponding to windows
+        and columns corresponding to signal_raw, labels, timestamps and electrode number. No assignment to the recording!
+    """
+    from pathlib import Path
+    import numpy as np
+    recordings = [p for p in Path(path).iterdir()]
+    frame_of_multiple_recordings = None
+    print('preprocessing started for:', path)
+    for rec in recordings:
+        frame_of_one_recording = preprocessing_for_one_recording(rec)
+        if frame_of_multiple_recordings is None:
+            frame_of_multiple_recordings = frame_of_one_recording.copy()
+        else:
+            frame_of_multiple_recordings = np.vstack((frame_of_multiple_recordings, frame_of_one_recording))
+    print('preprocessing finished for:', path)
+    return frame_of_multiple_recordings
