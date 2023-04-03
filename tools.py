@@ -260,3 +260,17 @@ def normalize_frame_whole(frame, scaler_type='minmax'):
         i[0] = data_norm.flatten()
     print(f"Normalization with scaler type '{scaler_type}' finished")
     return frame
+
+def sum_and_count(arrays):
+    """
+    sums up arrays and counts the appearance of each sum
+    :param arrays: Input array with nested arrays. Eg.: arrays = [[1, 2, 3], [4, 5, 6], [1, 2, 3]]
+    :return: results (defaultdict) which can be printed out like this:
+        results = sum_and_count(arrays)
+        print(results)
+    """
+    from collections import defaultdict
+    results = defaultdict(int)
+    for array in arrays:
+        results[sum(array)] += 1
+    return results

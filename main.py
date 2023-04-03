@@ -18,5 +18,11 @@ from visualization import visualize_assignments_of_one_recording
 
 from tools import preprocessing_for_multiple_recordings, normalize_frame
 frame = preprocessing_for_multiple_recordings(path_dir)
-frame_normalized = normalize_frame(frame)
+#frame_normalized = normalize_frame(frame)
+
+from tools import sum_and_count
+# for labels use as input frame[:,1] (equals the second column)
+results = sum_and_count(frame[:,1])
+print("for labels:", results)
+
 print('finish')
