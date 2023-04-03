@@ -16,7 +16,7 @@ from tools import preprocessing_for_one_recording
 from visualization import visualize_assignments_of_one_recording
 #visualize_assignments_of_one_recording(path_file, 15)
 
-from tools import preprocessing_for_multiple_recordings
-preprocessing_for_multiple_recordings(path_dir)
-
+from tools import preprocessing_for_multiple_recordings, normalize_frame, normalize_frame_opt
+frame = preprocessing_for_multiple_recordings(path_dir)
+frame_normalized = normalize_frame_opt(frame)
 print('finish')

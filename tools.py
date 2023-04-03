@@ -200,3 +200,62 @@ def preprocessing_for_multiple_recordings(path):
             frame_of_multiple_recordings = np.vstack((frame_of_multiple_recordings, frame_of_one_recording))
     print('preprocessing finished for:', path)
     return frame_of_multiple_recordings
+
+def normalize_frame(frame, scaler_type='minmax'):
+    """
+    Normalizes the raw data in the input array using the specified scaler type
+    :param frame: A numpy array representing the merged data, which is devided by windows. With rows corresponding to windows
+        and columns corresponding to signal_raw, labels, timestamps and electrode number. No assignment to the recording!
+    :param scaler_type: possible Scalers from sklearn.preprocessing: StandardScaler, MinMaxScaler, RobustScaler
+    :return: A numpy array representing the merged data, which is devided by windows. With rows corresponding to windows
+        and columns corresponding to signal_raw (normalized), labels, timestamps and electrode number. No assignment to the recording!
+    """
+    import numpy as np
+    from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+    if scaler_type == 'standard':
+        scaler = StandardScaler()
+    elif scaler_type == 'minmax':
+        scaler = MinMaxScaler()
+    elif scaler_type == 'robust':
+        scaler = RobustScaler()
+    else:
+        raise ValueError(f"Scaler type {scaler_type} not supported. Please choose 'standard', 'minmax', or 'robust'")
+
+    for i in frame:
+        data_raw = i[0]
+        data_norm = scaler.fit_transform(data_raw.reshape(-1,1))
+        i[0] = data_norm.flatten()
+    print(f"Normalization with scaler type '{scaler_type}' finished")
+    return frame
+
+def normalize_frame_opt(frame, scaler_type='minmax'):
+    """
+    Normalizes the raw data in the input array using the specified scaler type (optimized for long input array)
+    :param frame: A numpy array representing the merged data, which is devided by windows. With rows corresponding to windows
+        and columns corresponding to signal_raw, labels, timestamps and electrode number. No assignment to the recording!
+    :param scaler_type: possible Scalers from sklearn.preprocessing: StandardScaler, MinMaxScaler, RobustScaler
+    :return: A numpy array representing the merged data, which is devided by windows. With rows corresponding to windows
+        and columns corresponding to signal_raw (normalized), labels, timestamps and electrode number. No assignment to the recording!
+    """
+    import numpy as np
+    from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+    if scaler_type == 'standard':
+        scaler = StandardScaler()
+    elif scaler_type == 'minmax':
+        scaler = MinMaxScaler()
+    elif scaler_type == 'robust':
+        scaler = RobustScaler()
+    else:
+        raise ValueError(f"Scaler type {scaler_type} not supported. Please choose 'standard', 'minmax', or 'robust'")
+
+    # Concatenate all raw data into a single 2D array
+    data_raw_all = np.concatenate([i[0] for i in frame])
+    # Compute the scaler parameters on the concatenated raw data
+    scaler.fit(data_raw_all.reshape(-1, 1))
+
+    for i in frame:
+        data_raw = i[0]
+        data_norm = scaler.transform(data_raw.reshape(-1,1))
+        i[0] = data_norm.flatten()
+    print(f"Normalization with scaler type '{scaler_type}' finished")
+    return frame
