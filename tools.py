@@ -274,3 +274,141 @@ def sum_and_count(arrays):
     for array in arrays:
         results[sum(array)] += 1
     return results
+
+## Data Loader
+#https://pytorch.org/tutorials/recipes/recipes/custom_dataset_transforms_loader.html
+#@TODO: data loader works but is not applicaple
+
+import torch
+from torch.utils.data import Dataset, DataLoader
+class TimeSeriesDataset(Dataset):
+
+    def __init__(self, frame, window_size):
+        self.windows = []
+        self.labels = []
+        self.timestamps = []
+        self.electrodes = []
+        for row in frame:
+            data = row[0]
+            label = row[1]
+            timestamps = row[2]
+            electrodes = row[3]
+            for i in range(len(data) - window_size + 1):
+                window_data = data[i:i + window_size]
+                window_label = label[i:i + window_size]
+                window_timestamp = timestamps[i:i + window_size]
+                self.windows.append(window_data)
+                self.labels.append(window_label)
+                self.timestamps.append(window_timestamp)
+                self.electrodes.append(electrodes)
+
+        self.windows = torch.tensor(self.windows, dtype=torch.float32)
+        self.labels = torch.tensor(self.labels, dtype=torch.float32)
+        self.timestamps = torch.tensor(self.timestamps, dtype=torch.float32)
+        self.electrodes = torch.tensor(self.electrodes, dtype=torch.float32)
+
+    def __len__(self):
+        return len(self.windows)
+
+    """def __getitem__(self, idx):
+        return self.windows[idx], self.labels[idx], self.timestamps[idx], self.electrodes[idx]"""
+
+    def __getitem__(self, idx):
+        # Get the current index
+        window = self.windows[idx]
+        label = self.labels[idx]
+        timestamp = self.timestamps[idx]
+        electrode = self.electrodes[idx]
+
+        # Convert to a single NumPy array
+        window_array = np.array(window)
+        label_array = np.array(label)
+        timestamp_array = np.array(timestamp)
+        electrode_array = np.array(electrode)
+
+        # Convert to PyTorch tensors
+        window_tensor = torch.from_numpy(window_array).float()
+        label_tensor = torch.from_numpy(label_array).int()
+        timestamp_tensor = torch.from_numpy(timestamp_array).float()
+        electrode_tensor = torch.from_numpy(electrode_array).int()
+
+        return window_tensor, label_tensor, timestamp_tensor, electrode_tensor
+
+def get_window_size_of_frame(frame):
+    return len(frame[0][0])
+
+def convert_into_tensors_and_create_dataloader(frame, batch_size):
+    import torch
+    from torch.utils.data import Dataset, DataLoader
+    window_size_of_frame = get_window_size_of_frame(frame)
+    dataset = TimeSeriesDataset(frame, window_size=window_size_of_frame)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    print("Finished conversion into tensors. Data is loaded.")
+    return dataloader
+
+def create_data_loader(frame, window_size, batch_size):
+    import numpy as np
+    import torch
+    from torch.utils.data import Dataset, DataLoader
+    # Extract raw data and labels from frame
+    data = frame[:, 0]
+    labels = frame[:, 1]
+    timestamps = frame[:,2]
+    electrodes = frame[:,3]
+
+    # Convert the list of windows to single NumPy arrays for each "column"
+    data_array = np.array([data[i:i+window_size] for i in range(len(data) - window_size + 1)], dtype=np.float32)
+    label_array = np.array([labels[i:i+window_size] for i in range(len(labels) - window_size + 1)], dtype=np.int)
+    timestamp_array = np.array([timestamps[i:i+window_size] for i in range(len(timestamps) - window_size + 1)], dtype=np.float32)
+    electrodes_array = np.array(electrodes, dtype=np.int)
+
+    # Create a PyTorch TensorDataset from the window and label arrays
+    dataset = TensorDataset(torch.from_numpy(data_array), torch.from_numpy(label_array), torch.from_numpy(timestamp_array), torch.from_numpy(electrodes_array))
+
+    # Create a PyTorch DataLoader from the dataset
+    data_loader = DataLoader(dataset, batch_size=batch_size)
+
+    return data_loader
+
+
+import torch
+from torch.utils.data import Dataset, DataLoader
+import numpy as np
+class TimeSeriesDataset2(Dataset):
+    def __init__(self, data, window_size):
+        self.window_size = window_size
+        self.data = data[:, 0]  # extract data
+        self.labels = data[:, 1]  # extract label vectors
+        self.timestamps = data[:, 2]  # extract time points
+        self.electrodes = data[:, 3]  # extract electrode numbers
+
+    def __len__(self):
+        return len(self.data) - self.window_size + 1
+
+"""    def __getitem__(self, idx):
+        window = np.array(self.data[idx:idx + self.window_size]).astype(np.float32)
+        label = np.array(self.labels[idx:idx + self.window_size]).astype(np.float32)
+        timestamp = np.array(self.timestamps[idx:idx + self.window_size]).astype(np.float32)
+        electrode = np.array(self.electrodes[idx:idx + self.window_size]).astype(np.float32)"""
+
+"""        window = self.data[idx:idx + self.window_size]
+        label = self.labels[idx:idx + self.window_size]
+        timestamp = self.timestamps[idx:idx + self.window_size]
+        electrode = self.electrodes[idx:idx + self.window_size]"""
+
+
+"""        window = np.array(window).astype(np.float32)
+        label = np.array(label).astype(np.float32)
+        timestamp = np.array(timestamp).astype(np.float32)
+        electrode = np.array(electrode).astype(np.float32)"""
+"""
+        # Convert the window and label to PyTorch tensors
+        window_tensor = torch.from_numpy(window).float()
+        label_tensor = torch.from_numpy(label).float()
+        timestamp_tensor = torch.from_numpy(timestamp).float()
+        electrode_tensor = torch.from_numpy(electrode).float()
+"""
+        #return torch.FloatTensor(window), torch.FloatTensor(label), torch.FloatTensor(timestamp), torch.FloatTensor(electrode)
+        #return window_tensor, label_tensor, timestamp_tensor, electrode_tensor
+
+
