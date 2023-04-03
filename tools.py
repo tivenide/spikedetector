@@ -228,9 +228,10 @@ def normalize_frame(frame, scaler_type='minmax'):
     print(f"Normalization with scaler type '{scaler_type}' finished")
     return frame
 
-def normalize_frame_opt(frame, scaler_type='minmax'):
+def normalize_frame_whole(frame, scaler_type='minmax'):
     """
-    Normalizes the raw data in the input array using the specified scaler type (optimized for long input array)
+    Normalizes the raw data in the input array using the specified scaler type. Optimized for long input array,
+    but uses the entire dataset to compute the scaler parameters and normalizes in one "batch".
     :param frame: A numpy array representing the merged data, which is devided by windows. With rows corresponding to windows
         and columns corresponding to signal_raw, labels, timestamps and electrode number. No assignment to the recording!
     :param scaler_type: possible Scalers from sklearn.preprocessing: StandardScaler, MinMaxScaler, RobustScaler
