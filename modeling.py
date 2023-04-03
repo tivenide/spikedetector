@@ -154,6 +154,11 @@ def plot_confusion_matrix(confusion_matrix):
     plt.xlabel('Predicted label')
     plt.show()
 
+def get_confusion_matrix(predictions, labels):
+    from sklearn.metrics import confusion_matrix
+    cm = confusion_matrix(labels, predictions)
+    return cm
+
 # Plot the results
 #plot_loss(train_loss, val_loss)
 #plot_acc(train_acc, val_acc)
