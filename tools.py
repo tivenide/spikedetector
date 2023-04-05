@@ -175,13 +175,90 @@ def application_of_windowing(merged_data, window_size, step_size=None):
         and columns corresponding to signal_raw, labels, timestamps and electrode number.
     """
     import numpy as np
-
     frame = []
     for i in range(len(merged_data)):
         win1, win2, win3 = devide_3_vectors_into_equal_windows_with_step(merged_data[i][0], merged_data[i][1], merged_data[i][2], window_size, step_size)
         for l in range(len(win1)):
             frame.append(np.array([win1[l], win2[l], win3[l], i], dtype=object))
     return np.array(frame)
+
+def application_of_windowing2(merged_data, window_size, step_size=None):
+    n_windows = 0
+    for i in range(len(merged_data)):
+        # Calculate number of windows for each input vector
+        n_windows += len(devide_3_vectors_into_equal_windows_with_step(merged_data[i][0], merged_data[i][1], merged_data[i][2], window_size, step_size)[0])
+
+    # Create structured dtype for resulting array
+    dtype = [
+        ('win1', np.float64, (window_size,)),
+        ('win2', np.int32, (window_size,)),
+        ('win3', np.float32, (window_size,)),
+        ('index', np.int64)
+    ]
+
+    # Initialize empty numpy array with structured dtype
+    result_array = np.empty(n_windows, dtype=dtype)
+
+    # Fill result_array with windowed data and index values
+    window_index = 0
+    for i in range(len(merged_data)):
+        win1, win2, win3 = devide_3_vectors_into_equal_windows_with_step(merged_data[i][0], merged_data[i][1], merged_data[i][2], window_size, step_size)
+        for j in range(len(win1)):
+            result_array[window_index]['win1'] = win1[j]
+            result_array[window_index]['win2'] = win2[j]
+            result_array[window_index]['win3'] = win3[j]
+            result_array[window_index]['index'] = i
+            window_index += 1
+
+    return result_array
+
+def calculate_features(windows):
+    """
+    Calculates example features for each window in the input numpy array.
+
+    :param windows: Numpy array with dtype as defined in the previous step.
+    :return: Numpy array with additional fields for each window containing calculated features.
+    """
+    # Initialize empty arrays to store the calculated features
+    mean1 = np.zeros(len(windows))
+    mean2 = np.zeros(len(windows))
+    mean3 = np.zeros(len(windows))
+    var1 = np.zeros(len(windows))
+    var2 = np.zeros(len(windows))
+    var3 = np.zeros(len(windows))
+
+    # Loop over each window and calculate the features
+    for i in range(len(windows)):
+        # Get the three arrays in the window
+        win1 = windows[i]['win1']
+        win2 = windows[i]['win2']
+        win3 = windows[i]['win3']
+
+        # Calculate mean and variance for each array
+        mean1[i] = np.mean(win1)
+        mean2[i] = np.mean(win2)
+        mean3[i] = np.mean(win3)
+        var1[i] = np.var(win1)
+        var2[i] = np.var(win2)
+        var3[i] = np.var(win3)
+
+    # Create a new structured array with the additional fields for each window
+    new_dtype = windows.dtype.descr + [('mean1', np.float64), ('mean2', np.float64), ('mean3', np.float64), ('var1', np.float64), ('var2', np.float64), ('var3', np.float64)]
+    new_windows = np.zeros(len(windows), dtype=new_dtype)
+
+    # Copy over the original fields
+    for field in windows.dtype.fields:
+        new_windows[field] = windows[field]
+
+    # Add the calculated features
+    new_windows['mean1'] = mean1
+    new_windows['mean2'] = mean2
+    new_windows['mean3'] = mean3
+    new_windows['var1'] = var1
+    new_windows['var2'] = var2
+    new_windows['var3'] = var3
+
+    return new_windows
 
 def preprocessing_for_one_recording(path, window_size_in_sec=0.002):
     """
@@ -195,9 +272,10 @@ def preprocessing_for_one_recording(path, window_size_in_sec=0.002):
     assignments = assign_neuron_locations_to_electrode_locations(electrode_locations, neuron_locations, 20)
     merged_data = merge_data_to_location_assignments(assignments, signal_raw.transpose(), labels_of_all_spiketrains, timestamps)
     window_size_in_counts = get_window_size_in_index_count(timestamps, window_size_in_sec)
-    frame = application_of_windowing(merged_data, window_size=window_size_in_counts, step_size=None)
+    frame = application_of_windowing2(merged_data, window_size=window_size_in_counts, step_size=None)
+    frame2= calculate_features(frame)
     print('preprocessing finished for:', path)
-    return frame
+    return frame2
 
 def preprocessing_for_multiple_recordings(path):
     """

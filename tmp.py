@@ -54,4 +54,22 @@ for batch in dataloader:
     print('timestamps:', timestamps)
     print('Electrodes:', electrodes)
 
+def generate_demo_frame():
+    windows = np.empty((n_windows,), dtype=[
+        ('arr1', np.float64, (a,)),
+        ('arr2', np.int32, (a,)),
+        ('arr3', np.float32, (a,)),
+        ('int_val', np.int64),
+        ('bool_val', np.bool_),
+        ('arr4', np.float64, (b,))
+    ])
+    for i in range(n_windows):
+        windows[i]['arr1'] = np.random.rand(a)
+        windows[i]['arr2'] = np.random.randint(0, 10, size=a)
+        windows[i]['arr3'] = np.random.rand(a).astype(np.float32)
+        windows[i]['int_val'] = np.random.randint(0, 100)
+        windows[i]['bool_val'] = np.random.choice([True, False])
+        windows[i]['arr4'] = np.random.rand(b)
+    return windows
+
 print("finish")
