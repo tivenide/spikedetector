@@ -20,6 +20,13 @@ from tools import preprocessing_for_multiple_recordings, normalize_frame
 frame = preprocessing_for_multiple_recordings(path_dir)
 #frame_normalized = normalize_frame(frame)
 
+#saving numpy array to disk
+import numpy as np
+np.save('save/save.npy', frame, allow_pickle=True)
+#loading numpy array from disk
+frame2 = np.load('save/save.npy', allow_pickle=True)
+
+
 from tools import sum_and_count
 # check if more than 1 spike occurs per window. For labels use as input frame[:,1] (equals the second column)
 results = sum_and_count(frame[:,1])
@@ -27,7 +34,7 @@ print("for labels:", results)
 
 from tools import convert_into_tensors_and_create_dataloader, get_window_size_of_frame, TimeSeriesDataset, create_data_loader, TimeSeriesDataset2
 #dataloader = convert_into_tensors_and_create_dataloader(frame, batch_size=1)
-#win_size = get_window_size_of_frame(frame)
+win_size = get_window_size_of_frame(frame)
 #data_loader = create_data_loader(frame, win_size, batch_size=3)
 
 import torch
@@ -36,7 +43,7 @@ from torch.utils.data import Dataset, DataLoader
 # create a DataLoader
 batch_size = 3
 window_size = frame[0][0].shape[0]  # extract window size from the first window of the data
-dataset = TimeSeriesDataset2(frame, window_size)
+dataset = TimeSeriesDataset(frame, window_size)
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 for data in dataloader:
