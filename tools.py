@@ -260,7 +260,202 @@ def calculate_features(windows):
 
     return new_windows
 
-def preprocessing_for_one_recording(path, window_size_in_sec=0.002):
+
+def application_of_windowing3(merged_data, window_size, step_size=None):
+    num_features = 0
+    if step_size is None:
+        step_size = window_size
+    elif step_size is True:
+        step_size = window_size // 2
+    elif step_size is not None:
+        step_size = int(step_size)
+    num_windows = sum((len(x) - window_size) // step_size + 1 for x in merged_data)
+    frame = np.zeros((num_windows,), dtype=[
+        ('arr1', np.float64, (window_size,)),
+        ('arr2', np.float64, (window_size,)),
+        ('arr3', np.float64, (window_size,)),
+        ('i', np.int32),
+        ('features', np.float64, (num_features,))
+    ])
+
+    curr_idx = 0
+    for i, data in enumerate(merged_data):
+        num_windows_i = (len(data) - window_size) // step_size + 1
+        win1 = np.lib.stride_tricks.as_strided(
+            data, shape=(num_windows_i, window_size), strides=(data.strides[0] * step_size, data.strides[0]))
+        win2 = np.lib.stride_tricks.as_strided(
+            merged_data[i][1], shape=(num_windows_i, window_size),
+            strides=(merged_data[i][1].strides[0] * step_size, merged_data[i][1].strides[0]))
+        win3 = np.lib.stride_tricks.as_strided(
+            merged_data[i][2], shape=(num_windows_i, window_size),
+            strides=(merged_data[i][2].strides[0] * step_size, merged_data[i][2].strides[0]))
+
+        frame[curr_idx:curr_idx + num_windows_i]['arr1'] = win1
+        frame[curr_idx:curr_idx + num_windows_i]['arr2'] = win2
+        frame[curr_idx:curr_idx + num_windows_i]['arr3'] = win3
+        frame[curr_idx:curr_idx + num_windows_i]['i'] = i
+
+        curr_idx += num_windows_i
+
+    return frame
+
+def application_of_windowing4(merged_data, window_size, step_size=None):
+    num_features = 3
+    if step_size is None:
+        step_size = int(window_size)
+    elif step_size is True:
+        step_size = int(window_size // 2)
+    elif step_size is not None:
+        step_size = int(step_size)
+
+    num_windows = sum((data.shape[1] - window_size) // step_size + 1 for data in merged_data)
+    frame = np.zeros((num_windows,), dtype=[
+        ('arr1', np.float64, (window_size,)),
+        ('arr2', np.float64, (window_size,)),
+        ('arr3', np.float64, (window_size,)),
+        ('i', np.int32),
+        ('features', np.float64, (num_features,))
+    ])
+
+    curr_idx = 0
+    for i, data in enumerate(merged_data):
+        num_windows_i = (data.shape[1] - window_size) // step_size + 1
+        win1 = np.lib.stride_tricks.as_strided(
+            data[0], shape=(num_windows_i, window_size), strides=(data.strides[1] * step_size, data.strides[1]))
+        win2 = np.lib.stride_tricks.as_strided(
+            data[1], shape=(num_windows_i, window_size),
+            strides=(data.strides[1] * step_size, data.strides[1]))
+        win3 = np.lib.stride_tricks.as_strided(
+            data[2], shape=(num_windows_i, window_size),
+            strides=(data.strides[1] * step_size, data.strides[1]))
+
+        frame[curr_idx:curr_idx + num_windows_i]['arr1'] = win1
+        frame[curr_idx:curr_idx + num_windows_i]['arr2'] = win2
+        frame[curr_idx:curr_idx + num_windows_i]['arr3'] = win3
+        frame[curr_idx:curr_idx + num_windows_i]['i'] = i
+
+        curr_idx += num_windows_i
+
+    return frame
+
+def calculate_features5(window_data):
+    num_features = 3
+    features = np.zeros((num_features,))
+    features[0] = np.mean(window_data)
+    features[1] = np.sum(window_data)
+    features[2] = np.max(window_data)
+    return features
+
+def label_a_window_from_labels_of_a_window(window_data):
+    label = int(np.max(window_data))
+    return label
+
+def application_of_windowing5(merged_data, window_size, step_size=None):
+    #works more or less fast
+    if step_size is None:
+        step_size = window_size
+    elif step_size is True:
+        step_size = window_size // 2
+    elif step_size is not None:
+        step_size = int(step_size)
+
+    # calculate number of features dynamically based on the returned feature vector from calculate_features()
+    sample_data = merged_data[0][0:window_size]
+    features = calculate_features5(sample_data).shape[0]
+
+    num_windows = sum((data.shape[1] - window_size) // step_size + 1 for data in merged_data)
+    frame = np.zeros((num_windows,), dtype=[
+        ('arr1', np.float64, (window_size,)),
+        ('arr2', np.float64, (window_size,)),
+        ('arr3', np.float64, (window_size,)),
+        ('i', np.int32),
+        ('features', np.float64, (features,)),
+        ('features2', np.float64, (features,)),
+        ('label_per_win', np.int32)
+    ])
+
+    curr_idx = 0
+    for i, data in enumerate(merged_data):
+        num_windows_i = (data.shape[1] - window_size) // step_size + 1
+        win1 = np.lib.stride_tricks.as_strided(
+            data[0], shape=(num_windows_i, window_size), strides=(data[0].strides[0] * step_size, data[0].strides[0]))
+        win2 = np.lib.stride_tricks.as_strided(
+            data[1], shape=(num_windows_i, window_size), strides=(data[1].strides[0] * step_size, data[1].strides[0]))
+        win3 = np.lib.stride_tricks.as_strided(
+            data[2], shape=(num_windows_i, window_size), strides=(data[2].strides[0] * step_size, data[2].strides[0]))
+
+        for j in range(num_windows_i):
+            # calculate features for each window
+            #window_data = (win1[j], win1[j], win3[j])
+            window_data = win1[j]
+            features_data = calculate_features5(window_data)
+            features_data2 = calculate_features5(win3[j])
+            label = label_a_window_from_labels_of_a_window(win2[j])
+            frame[curr_idx]['arr1'] = win1[j]
+            frame[curr_idx]['arr2'] = win2[j]
+            frame[curr_idx]['arr3'] = win3[j]
+            frame[curr_idx]['i'] = i
+            frame[curr_idx]['features'] = features_data
+            frame[curr_idx]['features2'] = features_data2
+            frame[curr_idx]['label_per_win'] = label
+            curr_idx += 1
+
+    return frame
+
+
+def calculate_features3(frame):
+    num_features = 3
+    arr1 = frame['arr1']
+    arr2 = frame['arr2']
+    arr3 = frame['arr3']
+
+    features = np.zeros((len(frame), num_features))
+    features[:, 0] = np.sum(arr1, axis=1)  # example feature
+    features[:, 1] = np.mean(arr1, axis=1)  # example feature
+    features[:, 2] = np.var(arr3, axis=1)  # example feature
+
+    frame['features'] = features
+
+    return frame
+
+def application_of_windowing_vec(merged_data, window_size, step_size=None):
+    #does not work
+    if step_size is None:
+        step_size = window_size
+    elif step_size is True:
+        step_size = window_size // 2
+    elif step_size is not None:
+        step_size = int(step_size)
+    num_windows = np.sum((merged_data.shape[-1] - window_size) // step_size + 1)
+    num_features = calculate_features5(merged_data[0, :, :window_size]).shape[0]
+    frame = np.zeros((num_windows,), dtype=[
+        ('arr1', np.float64, (window_size,)),
+        ('arr2', np.float64, (window_size,)),
+        ('arr3', np.float64, (window_size,)),
+        ('i', np.int32),
+        ('features', np.float64, (num_features,))
+    ])
+
+    win1 = np.lib.stride_tricks.as_strided(
+        merged_data[:, 0, :], shape=(num_windows, window_size), strides=(merged_data.strides[1] * step_size, merged_data.strides[2]))
+    win2 = np.lib.stride_tricks.as_strided(
+        merged_data[:, 1, :], shape=(num_windows, window_size), strides=(merged_data.strides[1] * step_size, merged_data.strides[2]))
+    win3 = np.lib.stride_tricks.as_strided(
+        merged_data[:, 2, :], shape=(num_windows, window_size), strides=(merged_data.strides[1] * step_size, merged_data.strides[2]))
+
+    frame['arr1'] = win1
+    frame['arr2'] = win2
+    frame['arr3'] = win3
+    frame['i'] = np.repeat(np.arange(merged_data.shape[0]), (merged_data.shape[-1] - window_size) // step_size + 1)
+
+    features = np.apply_along_axis(calculate_features5, axis=1, arr=frame['arr1'])
+    frame['features'] = features
+
+    return frame
+
+
+
+def preprocessing_for_one_recording(path, window_size_in_sec=0.001):
     """
     preprocessing pipeline for one recording (without normalization)
     :param path: path to recording file
@@ -272,8 +467,8 @@ def preprocessing_for_one_recording(path, window_size_in_sec=0.002):
     assignments = assign_neuron_locations_to_electrode_locations(electrode_locations, neuron_locations, 20)
     merged_data = merge_data_to_location_assignments(assignments, signal_raw.transpose(), labels_of_all_spiketrains, timestamps)
     window_size_in_counts = get_window_size_in_index_count(timestamps, window_size_in_sec)
-    frame = application_of_windowing2(merged_data, window_size=window_size_in_counts, step_size=None)
-    frame2= calculate_features(frame)
+    frame = application_of_windowing(merged_data, window_size=window_size_in_counts, step_size=None)
+    frame2= calculate_features3(frame)
     print('preprocessing finished for:', path)
     return frame2
 
