@@ -346,6 +346,25 @@ def calculate_features5(window_data):
     features[2] = np.max(window_data)
     return features
 
+def calculate_features6(window_data, calculate=False):
+    if calculate is True:
+        num_features = 3
+        features = np.zeros((num_features,))
+        features[0] = np.mean(window_data)
+        features[1] = np.sum(window_data)
+        features[2] = np.max(window_data)
+        return features
+    elif calculate is False:
+        return np.zeros((1,))
+
+
+def calculate_features_vec(window_data):
+    #does not work properly
+    feature1 = np.mean(window_data)
+    feature2 = np.max(window_data)
+    features = np.column_stack((feature1, feature2))
+    return features
+
 def label_a_window_from_labels_of_a_window(window_data):
     label = int(np.max(window_data))
     return label
@@ -361,7 +380,7 @@ def application_of_windowing5(merged_data, window_size, step_size=None):
 
     # calculate number of features dynamically based on the returned feature vector from calculate_features()
     sample_data = merged_data[0][0:window_size]
-    features = calculate_features5(sample_data).shape[0]
+    features = calculate_features6(sample_data).shape[0]
 
     num_windows = sum((data.shape[1] - window_size) // step_size + 1 for data in merged_data)
     frame = np.zeros((num_windows,), dtype=[
@@ -388,8 +407,8 @@ def application_of_windowing5(merged_data, window_size, step_size=None):
             # calculate features for each window
             #window_data = (win1[j], win1[j], win3[j])
             window_data = win1[j]
-            features_data = calculate_features5(window_data)
-            features_data2 = calculate_features5(win3[j])
+            features_data = calculate_features6(window_data)
+            features_data2 = calculate_features6(win3[j])
             label = label_a_window_from_labels_of_a_window(win2[j])
             frame[curr_idx]['arr1'] = win1[j]
             frame[curr_idx]['arr2'] = win2[j]
@@ -467,10 +486,10 @@ def preprocessing_for_one_recording(path, window_size_in_sec=0.001):
     assignments = assign_neuron_locations_to_electrode_locations(electrode_locations, neuron_locations, 20)
     merged_data = merge_data_to_location_assignments(assignments, signal_raw.transpose(), labels_of_all_spiketrains, timestamps)
     window_size_in_counts = get_window_size_in_index_count(timestamps, window_size_in_sec)
-    frame = application_of_windowing(merged_data, window_size=window_size_in_counts, step_size=None)
-    frame2= calculate_features3(frame)
+    frame = application_of_windowing5(merged_data, window_size=window_size_in_counts, step_size=None)
+    #frame2= calculate_features3(frame)
     print('preprocessing finished for:', path)
-    return frame2
+    return frame
 
 def preprocessing_for_multiple_recordings(path):
     """
