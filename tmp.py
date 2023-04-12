@@ -36,7 +36,7 @@ class TimeSeriesDataset(Dataset):
 
 def get_window_size_of_frame(frame):
     return len(frame[0][0])
-
+"""
 frame = np.array([
     [[1, 2, 3],[0, 0, 0],[0, 0.1, 0.2],0],
     [[4, 5, 6],[0, 0, 1],[0.3, 0.4, 0.5],0],
@@ -53,6 +53,7 @@ for batch in dataloader:
     print('Labels:', labels)
     print('timestamps:', timestamps)
     print('Electrodes:', electrodes)
+"""
 
 def generate_demo_frame(n_windows=30, a=10, b=5):
     windows = np.empty((n_windows,), dtype=[
@@ -77,12 +78,41 @@ def splitting_data(data, labels):
     X = data
     y = labels
     x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
-    x_test, x_val, y_test, y_val = train_test_split(x_test, y_test, test_size=0.5)
+    x_test, x_val, y_test, y_val = train_test_split(x_test, y_test, test_size=0.2)
     return x_train, y_train, x_test, y_test, x_val, y_val
 
-frame = generate_demo_frame()
-data=frame['arr1']
-labels=frame['bool_val']
-x_train, y_train, x_test, y_test, x_val, y_val = splitting_data(data, labels)
+#frame = generate_demo_frame()
+#data=frame['arr1']
+#labels=frame['bool_val']
+#x_train, y_train, x_test, y_test, x_val, y_val = splitting_data(data, labels)
+
+
+def create_directory_structure(path):
+    """
+    Checks if a certain directory structure exists at the given path, and creates the structure if it doesn't.
+    :param path: path to working directory.
+    :return: None
+    """
+    import os
+    # Define the directory structure you want to create
+    directory_structure = [
+        "data/raw/test",
+        "data/raw/test",
+        "data/raw/test",
+        "data/save/after_normalization",
+        "data/save/before_normalization"
+    ]
+
+    # Check if each directory in the structure exists, and create it if it doesn't
+    for directory in directory_structure:
+        directory_path = os.path.join(path, directory)
+        if not os.path.exists(directory_path):
+            os.makedirs(directory_path)
+            print(f"Created directory: {directory_path}")
+        else:
+            print(f"Directory already exists: {directory_path}")
+
+#working_directory = "data"
+#create_directory_structure(working_directory)
 
 print("finish")
