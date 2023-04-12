@@ -54,7 +54,7 @@ for batch in dataloader:
     print('timestamps:', timestamps)
     print('Electrodes:', electrodes)
 
-def generate_demo_frame():
+def generate_demo_frame(n_windows=30, a=10, b=5):
     windows = np.empty((n_windows,), dtype=[
         ('arr1', np.float64, (a,)),
         ('arr2', np.int32, (a,)),
@@ -71,5 +71,18 @@ def generate_demo_frame():
         windows[i]['bool_val'] = np.random.choice([True, False])
         windows[i]['arr4'] = np.random.rand(b)
     return windows
+
+def splitting_data(data, labels):
+    from sklearn.model_selection import train_test_split
+    X = data
+    y = labels
+    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+    x_test, x_val, y_test, y_val = train_test_split(x_test, y_test, test_size=0.5)
+    return x_train, y_train, x_test, y_test, x_val, y_val
+
+frame = generate_demo_frame()
+data=frame['arr1']
+labels=frame['bool_val']
+x_train, y_train, x_test, y_test, x_val, y_val = splitting_data(data, labels)
 
 print("finish")
