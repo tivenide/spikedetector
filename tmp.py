@@ -143,7 +143,7 @@ def splitting_data(data, labels):
     return x_train, y_train, x_test, y_test, x_val, y_val
 
 
-def splitting_data_into_train_test_val_set(data, labels, test_and_val_size=0.4, val_size_of_test_and_val_size=0.5):
+def splitting_data_into_train_test_val_set(data, labels, test_and_val_size=0.6, val_size_of_test_and_val_size=0.5):
     """
     Splits data and labels into training, test and validation set.
     :param data: input set which contains data
@@ -376,7 +376,18 @@ def cropping_set(data, labels, cropping_size):
 
 
 # new pipeline:
-frame = generate_demo_frame_simple(1_000_000, a=3, label_dist=[0.7, 0.3])
+frame = generate_demo_frame_simple(20, a=3, label_dist=[0.7, 0.3])
+"""
+import numpy as np
+a=3
+frame = np.array([
+    [[1,2,3],0],
+    [[4,5,6],1]
+], dtype=[
+        ('arr1', np.int32, (a,)),
+        ('label', np.int32)
+    ])
+"""
 label_count_frame = count_label_appearances(frame['label'], [0, 1])
 print('frame', label_count_frame)
 x_train, y_train, x_test, y_test, x_val, y_val = splitting_data_into_train_test_val_set(frame['arr1'], frame['label'])
