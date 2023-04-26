@@ -75,8 +75,11 @@ def check_window_for_spikes(signal_window, std_threshold=5):
         return a * norm.pdf(x, loc=mu, scale=sigma)
 
     # Fit the histogram with the Gaussian function
-    popt, pcov = curve_fit(gaussian_func, bin_centers, hist)
-    mu, sigma = popt[1], popt[2]
+    try:
+        popt, pcov = curve_fit(gaussian_func, bin_centers, hist)
+        mu, sigma = popt[1], popt[2]
+    except RuntimeError:
+        return np.zeros_like(signal_window)
 
     # Check if the standard deviation is less than or equal to the threshold
     if sigma <= std_threshold:
@@ -173,10 +176,18 @@ def clean_timepoints_of_interest(timepoints_of_interest, cleaning_size):
     # function for cleaning timepoints in cleaning_size of refactory period.
     pass
 
+def calculate_counts(arr):
+    import numpy as np
+    lengths = []  # list to store the length of each subarray
+    for subarray in arr:
+        lengths.append(len(subarray))  # calculate the length of each subarray
+    total_length = sum(lengths)  # calculate the total length of all subarrays
+    average_length = np.mean(lengths)  # calculate the average length of all subarrays
+    return total_length, average_length
+
 
 def application_of_threshold_algorithm(signal_raw, timestamps, method='std', factor_pos=None, factor_neg=3.5):
     # function which uses above functions with default params, be careful about sample frequency !
-    # @TODO: deal with problem, if find_spike_free_windows_simplified() find no spike_free_window
     import numpy as np
     spiketrains = []
     print(f'Threshold detection with method {method} started')
@@ -188,21 +199,31 @@ def application_of_threshold_algorithm(signal_raw, timestamps, method='std', fac
         print('--- filtering')
         electrode_data_filtered = filter_data(electrode_data)
         print('--- calculation of threshold')
-        spike_free_windows = find_spike_free_windows_simplified(electrode_data_filtered)
 
         if method == 'std':
-            threshold = np.std(spike_free_windows)
+            spike_free_windows = find_spike_free_windows_simplified(electrode_data_filtered)
+            if spike_free_windows.size != 0: # check if spike_free_windows is not empty
+                threshold = np.std(spike_free_windows)
+            else:
+                threshold = np.std(electrode_data_filtered)
         elif method == 'rms':
-            threshold = np.sqrt(np.mean(np.square(spike_free_windows)))
+            spike_free_windows = find_spike_free_windows_simplified(electrode_data_filtered)
+            if spike_free_windows.size != 0: # check if spike_free_windows is not empty
+                threshold = np.sqrt(np.mean(np.square(spike_free_windows)))
+            else:
+                threshold = np.std(electrode_data_filtered)
         elif method == 'quiroga':
-            threshold = np.median(electrode_data_filtered) / 0.6745
+            threshold = np.median(np.absolute(electrode_data_filtered)) / 0.6745
 
         print('--- detection of spikes')
         timepoints_of_interest = getting_timepoints_of_interest_from_threshold(electrode_data_filtered, timestamps,
                                                                                threshold, factor_pos, factor_neg)
         spiketrains.append(timepoints_of_interest)
     print('Threshold detection finished')
-    return np.array(spiketrains)
+    total_counts, average_count = calculate_counts(np.array(spiketrains, dtype=object))
+    print("Spikes detected:", total_counts)
+    print("Average spikes per electrode:", average_count)
+    return np.array(spiketrains, dtype=object)
 
 
 # pipeline
