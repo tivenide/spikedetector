@@ -120,10 +120,12 @@ def generate_demo_frame_simple(n_windows=100, a=10, label_dist=[0.8,0.2]):
     import numpy as np
     windows = np.empty((n_windows,), dtype=[
         ('signals', np.int32, (a,)),
+        ('timestamps', np.int32, (a,)),
         ('label_per_window', np.int32)
     ])
     for i in range(n_windows):
         windows[i]['signals'] = np.random.randint(0, 10, size=a)
+        windows[i]['timestamps'] = np.arange(0, a, 1)
         windows[i]['label_per_window'] = create_random_label([0, 1], label_dist)  # [0.8, 0.2] [0.99, 0.01]
     return windows
 
@@ -240,6 +242,62 @@ def dataset_pipeline_creating_even_larger_datasets(path_source, path_target=None
         print('no saving is done, continuing with returned arrays')
     return frames_x_train_res, frames_y_train_res, frames_x_test_crp, frames_y_test_crp, frames_x_val_crp, frames_y_val_crp
 
+def plot_timeseries(data, save_path):
+    """
+    This function plots and saves the raw timeseries for each window in the input data.
+
+    Parameters:
+    data (ndarray): Input data containing different arrays, where each row represents a window of a timeseries.
+    save_path (str): Path to save the generated plots.
+
+    Returns:
+    None
+    """
+    import numpy as np
+    import matplotlib.pyplot as plt
+    print('started plotting')
+
+    # Determine the number of windows in the input data
+    n_windows = data.shape[0]
+    '''
+    y_min = np.inf
+    y_max = -np.inf
+    for i in range(n_windows):
+        raw_data = data[i]['signals']
+        y_min = min(y_min, np.min(raw_data))
+        y_max = max(y_max, np.max(raw_data))
+    '''
+
+    # Iterate over each window in the input data
+    for i in range(n_windows):
+
+        # Extract the raw timeseries data and the timepoints for this window
+        raw_data = data[i]['signals']
+        timepoints = data[i]['timestamps']
+        label = data[i]['label_per_window']
+
+        # Plot the raw timeseries for this window
+        plt.plot(timepoints, raw_data, color='k')
+        #plt.xlabel('Time')
+        #plt.ylabel('Raw Data')
+        #plt.title(f'Window {i+1}')
+
+        # Set the y-axis limits
+        #plt.ylim(y_min, y_max)
+
+        plt.axis('off')
+        plt.gcf().set_size_inches(128/80, 128/80)
+
+        # Save the plot if a save path is provided
+        if save_path is not None:
+            plt.savefig(f'{save_path}/window_{i+1}_{label}.jpg', dpi=50, format='jpg', bbox_inches='tight', pad_inches=0)
+
+        # Clear the plot
+        plt.clf()
+
+frame = generate_demo_frame_simple(100, 20)
+x_train_res, y_train_res, x_test_crp, y_test_crp, x_val_crp, y_val_crp = dataset_pipeline_for_training_process(frame)
+"""
 frame1 = generate_demo_frame_simple(100, 3)
 save_frame_to_disk(frame1, 'save2/try/origin/frame1.npy')
 
@@ -261,5 +319,5 @@ frame_x_test_crp = np.vstack((frame1_x_test_crp, frame2_x_test_crp, frame3_x_tes
 frame_y_test_crp = np.hstack((frame1_y_test_crp, frame2_y_test_crp, frame3_y_test_crp))
 frame_x_val_crp = np.vstack((frame1_x_val_crp, frame2_x_val_crp, frame3_x_val_crp))
 frame_y_val_crp = np.hstack((frame1_y_val_crp, frame2_y_val_crp, frame3_y_val_crp))
-
+"""
 print('finish')
