@@ -172,9 +172,32 @@ def getting_timepoints_of_interest_from_threshold(electrode_data, timestamps, th
     return np.array(timepoints_of_interest)
 
 
-def clean_timepoints_of_interest(timepoints_of_interest, cleaning_size):
-    # function for cleaning timepoints in cleaning_size of refactory period.
-    pass
+def clean_timepoints_of_interest(timepoints_of_interest, refractory_period):
+    """
+    cleaning timepoints within refactory period.
+
+    Parameters
+    ----------
+    timepoints_of_interest: np.array
+        An array which contains timepoints, when threshold was raised.
+    refractory_period: float
+        Time in which multiple occurring spikes will be cleaned (deleted)
+
+    Returns
+    -------
+    numpy.ndarray
+        A cleaned version on an array which contains timepoints, when threshold was raised.
+    """
+    # function for cleaning timepoints within refactory period.
+    import numpy as np
+    timepoints_of_interest_cleaned = [timepoints_of_interest[0]]
+    n = len(timepoints_of_interest)
+    for i in range(1, n):
+        if timepoints_of_interest[i] - timepoints_of_interest_cleaned[-1] > refractory_period:
+            timepoints_of_interest_cleaned.append(timepoints_of_interest[i])
+    timepoints_of_interest_cleaned = np.array(timepoints_of_interest_cleaned)
+
+    return timepoints_of_interest_cleaned
 
 def calculate_counts(arr):
     import numpy as np
@@ -186,7 +209,7 @@ def calculate_counts(arr):
     return total_length, average_length
 
 
-def application_of_threshold_algorithm(signal_raw, timestamps, method='std', factor_pos=None, factor_neg=3.5):
+def application_of_threshold_algorithm(signal_raw, timestamps, method='std', factor_pos=None, factor_neg=3.5, refractory_period=0.001):
     # function which uses above functions with default params, be careful about sample frequency !
     import numpy as np
     spiketrains = []
@@ -218,7 +241,9 @@ def application_of_threshold_algorithm(signal_raw, timestamps, method='std', fac
         print('--- detection of spikes')
         timepoints_of_interest = getting_timepoints_of_interest_from_threshold(electrode_data_filtered, timestamps,
                                                                                threshold, factor_pos, factor_neg)
-        spiketrains.append(timepoints_of_interest)
+        print('--- cleaning refactory period')
+        timepoints_of_interest_cleaned = clean_timepoints_of_interest(timepoints_of_interest, refractory_period=refractory_period)
+        spiketrains.append(timepoints_of_interest_cleaned)
     print('Threshold detection finished')
     total_counts, average_count = calculate_counts(np.array(spiketrains, dtype=object))
     print("Spikes detected:", total_counts)
