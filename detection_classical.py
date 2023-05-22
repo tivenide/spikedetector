@@ -190,14 +190,17 @@ def clean_timepoints_of_interest(timepoints_of_interest, refractory_period):
     """
     # function for cleaning timepoints within refactory period.
     import numpy as np
-    timepoints_of_interest_cleaned = [timepoints_of_interest[0]]
-    n = len(timepoints_of_interest)
-    for i in range(1, n):
-        if timepoints_of_interest[i] - timepoints_of_interest_cleaned[-1] > refractory_period:
-            timepoints_of_interest_cleaned.append(timepoints_of_interest[i])
-    timepoints_of_interest_cleaned = np.array(timepoints_of_interest_cleaned)
+    if timepoints_of_interest.size > 0:
+        timepoints_of_interest_cleaned = [timepoints_of_interest[0]]
+        n = len(timepoints_of_interest)
+        for i in range(1, n):
+            if timepoints_of_interest[i] - timepoints_of_interest_cleaned[-1] > refractory_period:
+                timepoints_of_interest_cleaned.append(timepoints_of_interest[i])
+        timepoints_of_interest_cleaned = np.array(timepoints_of_interest_cleaned)
 
-    return timepoints_of_interest_cleaned
+        return timepoints_of_interest_cleaned
+    else:
+        return timepoints_of_interest
 
 def calculate_counts(arr):
     import numpy as np
@@ -250,16 +253,175 @@ def application_of_threshold_algorithm(signal_raw, timestamps, method='std', fac
     print("Average spikes per electrode:", average_count)
     return np.array(spiketrains, dtype=object)
 
+def preprocessing_for_one_recording_without_windowing(path):
+    """
+    preprocessing pipeline for one recording (without windowing)
+    :param path: path to recording file
+    :return: frame: A numpy array representing the merged data.
+    """
+    from tools import import_recording_h5, create_labels_of_all_spiketrains, assign_neuron_locations_to_electrode_locations, merge_data_to_location_assignments
+    signal_raw, timestamps, ground_truth, electrode_locations, neuron_locations = import_recording_h5(path)
+    labels_of_all_spiketrains = create_labels_of_all_spiketrains(ground_truth, timestamps)
+    assignments = assign_neuron_locations_to_electrode_locations(electrode_locations, neuron_locations, 20)
+    merged_data = merge_data_to_location_assignments(assignments, signal_raw.transpose(), labels_of_all_spiketrains, timestamps)
+    return merged_data
+
+
+def calculate_metrics_simple(data_gt, detection_output):
+    import numpy as np
+    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+    # Assuming 'detection_output' is the ndarray returned by the detection algorithm with shape (electrodes,)
+    # and 'data_gt' is the ndarray with labels of shape (electrodes, 3, timestamps)
+
+    # Initialize empty lists to store evaluation metrics for each sensor
+    accuracy_scores = []
+    precision_scores = []
+    recall_scores = []
+    f1_scores = []
+
+    # Iterate over each sensor
+    for sensor in range(len(data_gt)):
+        # Retrieve the recorded values, labels, and timestamps for the current sensor
+        recorded_values = data_gt[sensor, 0, :]
+        labels = data_gt[sensor, 1, :]
+        timestamps = data_gt[sensor, 2, :]
+
+        # Create binary arrays indicating the ground truth and detected spikes
+        ground_truth_spikes = np.zeros_like(timestamps)
+        ground_truth_spikes[labels == 1] = 1
+        detected_spikes = np.zeros_like(timestamps)
+        detected_spikes[np.isin(timestamps, detection_output[sensor])] = 1
+
+        # Calculate evaluation metrics for the current sensor
+        accuracy = accuracy_score(ground_truth_spikes, detected_spikes)
+        precision = precision_score(ground_truth_spikes, detected_spikes)
+        recall = recall_score(ground_truth_spikes, detected_spikes)
+        f1 = f1_score(ground_truth_spikes, detected_spikes)
+
+        # Append the scores to the respective lists
+        accuracy_scores.append(accuracy)
+        precision_scores.append(precision)
+        recall_scores.append(recall)
+        f1_scores.append(f1)
+
+    # Calculate the mean of evaluation metrics across all sensors
+    mean_accuracy = np.mean(accuracy_scores)
+    mean_precision = np.mean(precision_scores)
+    mean_recall = np.mean(recall_scores)
+    mean_f1 = np.mean(f1_scores)
+
+    # Print the evaluation metrics
+    print("Mean Accuracy:", mean_accuracy)
+    print("Mean Precision:", mean_precision)
+    print("Mean Recall:", mean_recall)
+    print("Mean F1-score:", mean_f1)
+
+def calculate_metrics_with_windows(data_gt, detection_output, window_size=10):
+    import numpy as np
+
+    # Assuming 'detection_output' is the ndarray returned by the detection algorithm with shape (electrodes,)
+    # and 'data_gt' is the ndarray with labels of shape (electrodes, 3, timestamps)
+
+    # Initialize empty lists to store evaluation metrics for each sensor
+    accuracy_scores = []
+    precision_scores = []
+    recall_scores = []
+    f1_scores = []
+    spikes_total = []
+
+    # Iterate over each sensor
+    for sensor in range(len(data_gt)):
+        # Retrieve the recorded values, labels, and timestamps for the current sensor
+        recorded_values = data_gt[sensor, 0, :]
+        labels = data_gt[sensor, 1, :]
+        timestamps = data_gt[sensor, 2, :]
+
+        # Initialize empty lists to store evaluation metrics for each sensor
+        true_positives = 0
+        false_positives = 0
+        true_negatives = 0
+        false_negatives = 0
+
+        # Create binary arrays indicating the ground truth and detected spikes
+
+        ground_truth_spikes = np.zeros_like(timestamps)
+        ground_truth_spikes[labels == 1] = 1
+        detected_spikes = np.zeros_like(timestamps)
+        detected_spikes[np.isin(timestamps, detection_output[sensor])] = 1
+
+        spikes_sum = np.sum(ground_truth_spikes)
+
+        # Apply windowing to ground truth and detected spikes
+        num_windows = len(timestamps) // window_size
+        ground_truth_spikes_windowed = np.split(ground_truth_spikes[:num_windows * window_size], num_windows)
+        detected_spikes_windowed = np.split(detected_spikes[:num_windows * window_size], num_windows)
+
+        # Compare the windows to calculate TP, FP, TN, FN
+        for i in range(num_windows):
+            if np.max(ground_truth_spikes_windowed[i]) > 0:
+                if np.max(detected_spikes_windowed[i]) > 0:
+                    true_positives += 1
+                else:
+                    false_negatives += 1
+            else:
+                if np.max(detected_spikes_windowed[i]) > 0:
+                    false_positives += 1
+                else:
+                    true_negatives += 1
+
+        accuracy = (true_positives + true_negatives) / (true_positives + true_negatives + false_positives + false_negatives) if (true_positives + true_negatives + false_positives + false_negatives) > 0 else 0.0
+        precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0.0
+        recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0.0
+        f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+        specificity = true_negatives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0.0
+
+
+        # Append the scores to the respective lists
+        spikes_total.append(spikes_sum)
+
+        accuracy_scores.append(accuracy)
+        precision_scores.append(precision)
+        recall_scores.append(recall)
+        f1_scores.append(f1)
+
+    # Calculate the mean of precision and recall scores across all sensors
+    mean_accuracy = np.mean(accuracy_scores)
+    mean_precision = np.mean(precision_scores)
+    mean_recall = np.mean(recall_scores)
+    mean_f1 = np.mean(f1_scores)
+
+    # Print the evaluation metrics
+    print("Ground Truth")
+    print("Spikes:", np.sum(spikes_total))
+    print("Average Spikes per electrode:", np.mean(spikes_total))
+    print("Mean Accuracy:", mean_accuracy)
+    print("Mean Precision:", mean_precision)
+    print("Mean Recall:", mean_recall)
+    print("Mean F1:", mean_f1)
+    return accuracy_scores, precision_scores, recall_scores, f1_scores
+
+def demo_arrays():
+    demo_detect_output = np.array([[0.3, 0.7],
+                               [0, 0.4, 0.7]],dtype=object)
+
+    demo_ground_truth = np.array([[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],[0,0,0,1,0,0,1,0,0,0],[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]],
+                    [[10, 11, 12, 13, 14, 15, 16, 17, 18, 19],[1,0,0,0,0,0,0,0,1,0],[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]]])
+    return demo_detect_output, demo_ground_truth
 
 # pipeline
+import numpy as np
 
 path_to_data_file_h5 = ''
 
 from tools import import_recording_h5
 signal_raw, timestamps, ground_truth, channel_positions, template_locations = import_recording_h5(path_to_data_file_h5)
 
-spiketrains = application_of_threshold_algorithm(signal_raw, timestamps)
+detection_output = application_of_threshold_algorithm(signal_raw, timestamps, factor_neg=3.9, factor_pos=3.9, refractory_period=0.002)
 
+# evaluation
+data_ground_truth = preprocessing_for_one_recording_without_windowing(path_to_data_file_h5)
 
+accuracy_scores, precision_scores, recall_scores, f1_scores = calculate_metrics_with_windows(data_ground_truth, detection_output, window_size=40)
 
 print('classical detection finished')
