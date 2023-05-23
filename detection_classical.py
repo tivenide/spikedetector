@@ -328,6 +328,8 @@ def calculate_metrics_with_windows(data_gt, detection_output, window_size=10):
     precision_scores = []
     recall_scores = []
     f1_scores = []
+    specificity_scores = []
+
     spikes_total = []
 
     # Iterate over each sensor
@@ -384,12 +386,14 @@ def calculate_metrics_with_windows(data_gt, detection_output, window_size=10):
         precision_scores.append(precision)
         recall_scores.append(recall)
         f1_scores.append(f1)
+        specificity_scores.append(specificity)
 
     # Calculate the mean of precision and recall scores across all sensors
     mean_accuracy = np.mean(accuracy_scores)
     mean_precision = np.mean(precision_scores)
     mean_recall = np.mean(recall_scores)
     mean_f1 = np.mean(f1_scores)
+    mean_specificity = np.mean(specificity_scores)
 
     # Print the evaluation metrics
     print("Ground Truth")
@@ -399,6 +403,7 @@ def calculate_metrics_with_windows(data_gt, detection_output, window_size=10):
     print("Mean Precision:", mean_precision)
     print("Mean Recall:", mean_recall)
     print("Mean F1:", mean_f1)
+    print("Mean Specificity:", mean_specificity)
     return accuracy_scores, precision_scores, recall_scores, f1_scores
 
 def demo_arrays():
@@ -417,7 +422,7 @@ path_to_data_file_h5 = ''
 from tools import import_recording_h5
 signal_raw, timestamps, ground_truth, channel_positions, template_locations = import_recording_h5(path_to_data_file_h5)
 
-detection_output = application_of_threshold_algorithm(signal_raw, timestamps, factor_neg=3.9, factor_pos=3.9, refractory_period=0.002)
+detection_output = application_of_threshold_algorithm(signal_raw, timestamps, factor_neg=4.0, factor_pos=4.0, refractory_period=0.002)
 
 # evaluation
 data_ground_truth = preprocessing_for_one_recording_without_windowing(path_to_data_file_h5)
@@ -425,3 +430,18 @@ data_ground_truth = preprocessing_for_one_recording_without_windowing(path_to_da
 accuracy_scores, precision_scores, recall_scores, f1_scores = calculate_metrics_with_windows(data_ground_truth, detection_output, window_size=40)
 
 print('classical detection finished')
+
+"""
+data: rec_allen_60_17_12_10000_10000_10000_10000_10_20_32.h5
+
+Spikes detected: 7651
+Average spikes per electrode: 127.51666666666667
+Ground Truth
+Spikes: 3914.0
+Average Spikes per electrode: 65.23333333333333
+Mean Accuracy: 0.99054
+Mean Precision: 0.07252085885420147
+Mean Recall: 0.04684477192692837
+Mean F1: 0.053707040880014774
+
+"""
