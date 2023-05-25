@@ -1,7 +1,7 @@
 # classical detection approaches
 # see at the end of the file the pipeline
 
-def filter_data(data, method='bandpass', fs=10000, f_low=300, f_high=3000, order=4):
+def filter_data(data, method='bandpass', fs=10000, f_low=300, f_high=4000, order=4):
     """
     Filter data using different filtering methods.
 
@@ -404,7 +404,74 @@ def calculate_metrics_with_windows(data_gt, detection_output, window_size=10):
     print("Mean Recall:", mean_recall)
     print("Mean F1:", mean_f1)
     print("Mean Specificity:", mean_specificity)
-    return accuracy_scores, precision_scores, recall_scores, f1_scores
+    return accuracy_scores, precision_scores, recall_scores, f1_scores, detected_spikes_windowed
+
+
+def plot_roc(data_gt, detection_output, window_size=10):
+    import numpy as np
+
+    # Initialize empty lists to store evaluation metrics for each sensor
+    gt_list = []
+    det_list = []
+
+    for sensor in range(len(data_gt)):
+
+        # Retrieve the recorded values, labels, and timestamps for the current sensor
+        recorded_values = data_gt[sensor, 0, :]
+        labels = data_gt[sensor, 1, :]
+        timestamps = data_gt[sensor, 2, :]
+
+        # Initialize empty lists to store evaluation metrics for each sensor
+        ground_truth_spikes_windowed_aggregated = []
+        detected_spikes_windowed_aggregated = []
+
+        # Create binary arrays indicating the ground truth and detected spikes
+
+        ground_truth_spikes = np.zeros_like(timestamps)
+        ground_truth_spikes[labels == 1] = 1
+        detected_spikes = np.zeros_like(timestamps)
+        detected_spikes[np.isin(timestamps, detection_output[sensor])] = 1
+
+        # Apply windowing to ground truth and detected spikes
+        num_windows = len(timestamps) // window_size
+        ground_truth_spikes_windowed = np.split(ground_truth_spikes[:num_windows * window_size], num_windows)
+        detected_spikes_windowed = np.split(detected_spikes[:num_windows * window_size], num_windows)
+
+        for i in range(num_windows):
+            ground_truth_spikes_windowed_aggregated.append(np.max(ground_truth_spikes_windowed[i]))
+            detected_spikes_windowed_aggregated.append(np.max(detected_spikes_windowed[i]))
+
+        gt_list.append(ground_truth_spikes_windowed_aggregated)
+        det_list.append(detected_spikes_windowed_aggregated)
+
+    gt_concat = np.concatenate(gt_list)
+    det_concat = np.concatenate(det_list)
+
+    y_true = gt_concat
+    y_score = det_concat
+
+    import matplotlib.pyplot as plt
+    from sklearn.metrics import roc_curve, auc
+    fpr, tpr, thresholds = roc_curve(y_true, y_score)
+    roc_auc = auc(fpr, tpr)
+
+    plt.figure()
+    lw = 2
+    plt.plot(fpr, tpr, color='darkorange',
+             lw=lw, label='ROC curve (area = %0.2f)' % roc_auc)
+    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic')
+    plt.legend(loc="lower right")
+
+    output_file='roc_curve.png'
+    plt.savefig(output_file)
+    plt.close()
+
+
 
 def demo_arrays():
     demo_detect_output = np.array([[0.3, 0.7],
@@ -422,13 +489,15 @@ path_to_data_file_h5 = ''
 from tools import import_recording_h5
 signal_raw, timestamps, ground_truth, channel_positions, template_locations = import_recording_h5(path_to_data_file_h5)
 
+demo_detect_output, demo_ground_truth = demo_arrays()
+
 detection_output = application_of_threshold_algorithm(signal_raw, timestamps, factor_neg=4.0, factor_pos=4.0, refractory_period=0.002)
 
 # evaluation
 data_ground_truth = preprocessing_for_one_recording_without_windowing(path_to_data_file_h5)
 
-accuracy_scores, precision_scores, recall_scores, f1_scores = calculate_metrics_with_windows(data_ground_truth, detection_output, window_size=40)
-
+accuracy_scores, precision_scores, recall_scores, f1_scores, _ = calculate_metrics_with_windows(data_ground_truth, detection_output, window_size=40)
+plot_roc(data_ground_truth, detection_output, window_size=40)
 print('classical detection finished')
 
 """
